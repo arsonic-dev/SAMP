@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel Demo</title>
+  <style>
+    :root {
+      --bg: #0e1b1f;
+      --panel: rgba(16, 34, 39, 0.94);
+      --ink: #eff8f6;
+      --accent: #6bd3b0;
+      --line: rgba(107, 211, 176, 0.26);
+    }
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      background:
+        linear-gradient(135deg, rgba(107, 211, 176, 0.08), transparent 40%),
+        radial-gradient(circle at top right, rgba(87, 180, 255, 0.15), transparent 30%),
+        var(--bg);
+      color: var(--ink);
+    }
+    main { max-width: 920px; margin: 0 auto; padding: 28px 18px 60px; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 22px;
+      margin-bottom: 18px;
+      backdrop-filter: blur(12px);
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+    input, textarea, button {
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.06);
+      color: var(--ink);
+      font: inherit;
+    }
+    button {
+      background: linear-gradient(120deg, #6bd3b0, #57b4ff);
+      color: #06222a;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: rgba(0,0,0,0.28);
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 120px;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <section class="panel">
+    <h1>Admin Panel Demo</h1>
+    <p>This client focuses on tenant administration and policy setup after a user has signed in.</p>
+    <input id="baseUrl" value="http://localhost:8080" aria-label="SAMP base URL">
+  </section>
+
+  <section class="grid">
+    <div class="panel">
+      <h2>Create Role</h2>
+      <input id="roleName" value="admin">
+      <button id="createRole">POST /policy/roles</button>
+    </div>
+    <div class="panel">
+      <h2>Create Permission</h2>
+      <input id="permissionName" value="Admin dashboard view">
+      <input id="permissionResource" value="admin.dashboard">
+      <input id="permissionAction" value="view">
+      <button id="createPermission">POST /policy/permissions</button>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="panel">
+      <h2>Assign Permission</h2>
+      <input id="roleId" placeholder="Role ID">
+      <input id="permissionId" placeholder="Permission ID">
+      <button id="assignPermission">Attach Permission to Role</button>
+    </div>
+    <div class="panel">
+      <h2>Assign Role</h2>
+      <input id="userId" placeholder="User ID">
+      <input id="assignRoleId" placeholder="Role ID">
+      <button id="assignRole">Attach Role to User</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Create ABAC Rule</h2>
+    <textarea id="policyBody">{
+  "roleName": "admin",
+  "effect": "ALLOW",
+  "conditions": {
+    "maxRiskScore": 70,
+    "allowedResourceSensitivities": ["LOW", "MEDIUM", "HIGH"],
+    "allowedFromHour": "7",
+    "allowedToHour": "22"
+  }
+}</textarea>
+    <button id="createPolicyRule">POST /policy/rules</button>
+  </section>
+
+  <section class="panel">
+    <h2>Authorization Token</h2>
+    <textarea id="accessToken" placeholder="Paste a Bearer token from the college portal flow"></textarea>
+  </section>
+
+  <section class="panel">
+    <h2>Output</h2>
+    <pre id="output">Ready.</pre>
+  </section>
+</main>
+
+<script>
+  const output = document.getElementById("output");
+  const show = (label, payload) => {
+    output.textContent = `${label}\n\n${typeof payload === "string" ? payload : JSON.stringify(payload, null, 2)}`;
+  };
+
+  async function post(path, body) {
+    const response = await fetch(`${document.getElementById("baseUrl").value.trim()}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${document.getElementById("accessToken").value.trim()}`,
+        "X-Device-Id": "admin-panel-browser"
+      },
+      body: JSON.stringify(body)
+    });
+    const text = await response.text();
+    return { response, data: text ? JSON.parse(text) : {} };
+  }
+
+  document.getElementById("createRole").onclick = async () => {
+    const { data } = await post("/policy/roles", { name: document.getElementById("roleName").value });
+    document.getElementById("roleId").value = data.id || "";
+    document.getElementById("assignRoleId").value = data.id || "";
+    show("Create role", data);
+  };
+
+  document.getElementById("createPermission").onclick = async () => {
+    const { data } = await post("/policy/permissions", {
+      name: document.getElementById("permissionName").value,
+      resource: document.getElementById("permissionResource").value,
+      action: document.getElementById("permissionAction").value
+    });
+    document.getElementById("permissionId").value = data.id || "";
+    show("Create permission", data);
+  };
+
+  document.getElementById("assignPermission").onclick = async () => {
+    const roleId = document.getElementById("roleId").value;
+    const permissionId = document.getElementById("permissionId").value;
+    const { data } = await post(`/policy/roles/${roleId}/permissions/${permissionId}`, {});
+    show("Assign permission", data);
+  };
+
+  document.getElementById("assignRole").onclick = async () => {
+    const roleId = document.getElementById("assignRoleId").value;
+    const userId = document.getElementById("userId").value;
+    const { data } = await post(`/policy/users/${userId}/roles/${roleId}`, {});
+    show("Assign role", data);
+  };
+
+  document.getElementById("createPolicyRule").onclick = async () => {
+    const { data } = await post("/policy/rules", JSON.parse(document.getElementById("policyBody").value));
+    show("Create policy rule", data);
+  };
+</script>
+</body>
+</html>

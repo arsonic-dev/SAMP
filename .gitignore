@@ -1,0 +1,23 @@
+auth-service/target/
+risk-engine/.venv/
+risk-engine/__pycache__/
+risk-engine/.pytest_cache/
+*.pyc
+*.pyo
+*.log
+.idea/
+.vscode/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+
+# Secrets
+.env
+*.pem
+
+# AI Agents
+.agent/
+.gemini/
