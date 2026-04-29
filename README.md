@@ -1,7 +1,7 @@
 # SAMP (Secure Access Management Platform)
 
 <div align="center">
-  <img src="docs/assets/command-center.png" alt="SAMP Command Center & Threat Matrix" width="100%" />
+  <img src="docs/assets/risk-monitor.png" alt="SAMP Command Center & Threat Matrix" width="100%" />
 </div>
 
 <br/>
